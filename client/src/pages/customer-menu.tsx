@@ -29,7 +29,10 @@ export default function CustomerMenu() {
   const { toast } = useToast();
   
   // Connect to WebSocket for real-time updates
-  const { sendMessage } = useSocket(parseInt(restaurantId), parseInt(tableId));
+  const { sendMessage } = useSocket(
+    restaurantId ? parseInt(restaurantId) : undefined, 
+    tableId ? parseInt(tableId) : undefined
+  );
   
   const [restaurant, setRestaurant] = useState<any>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -45,6 +48,8 @@ export default function CustomerMenu() {
   const [isCallWaiterDialogOpen, setIsCallWaiterDialogOpen] = useState(false);
   const [waiterRequestSent, setWaiterRequestSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // The sendWaiterRequest function is defined further down in the file
 
   // Fetch restaurant and menu items
   useEffect(() => {
@@ -157,6 +162,16 @@ export default function CustomerMenu() {
   const sendWaiterRequest = () => {
     if (!restaurantId || !tableId) return;
     
+    if (!customerName.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter your name so the waiter knows who to assist.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // The socket library expects a message with type and payload fields
     sendMessage({
       type: 'call-waiter',
       payload: {
@@ -171,14 +186,14 @@ export default function CustomerMenu() {
     setWaiterRequestSent(true);
     
     toast({
-      title: "Waiter called",
+      title: "Waiter Called",
       description: "A staff member will be with you shortly",
     });
     
-    // Reset waiter request status after 30 seconds
+    // Reset waiter request status after 2 minutes
     setTimeout(() => {
       setWaiterRequestSent(false);
-    }, 30000);
+    }, 2 * 60 * 1000);
   };
 
   // Place order

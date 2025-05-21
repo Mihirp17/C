@@ -130,6 +130,27 @@ export default function Dashboard() {
       allowedRoles={['restaurant']}
     >
       <div className="space-y-6">
+        {/* Waiter Requests Alert - Only show if there are active requests */}
+        {waiterRequests.length > 0 && (
+          <Alert className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+            <span className="material-icons text-amber-500 mr-2">notifications_active</span>
+            <AlertTitle className="text-amber-800 dark:text-amber-300">Waiter Assistance Needed</AlertTitle>
+            <AlertDescription className="text-amber-700 dark:text-amber-400">
+              {waiterRequests.length} {waiterRequests.length === 1 ? 'table is' : 'tables are'} requesting assistance.
+              <Button 
+                variant="link" 
+                className="text-amber-700 dark:text-amber-400 p-0 ml-2 underline" 
+                onClick={() => {
+                  setSelectedWaiterRequest(waiterRequests[0]);
+                  setIsWaiterDialogOpen(true);
+                }}
+              >
+                View Requests
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {/* Stats Controls */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div></div>
@@ -222,6 +243,71 @@ export default function Dashboard() {
           <PopularItems restaurantId={restaurantId} />
         </div>
       </div>
+
+      {/* Waiter Request Details Dialog */}
+      <Dialog open={isWaiterDialogOpen} onOpenChange={setIsWaiterDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Waiter Requests</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {waiterRequests.length > 0 ? (
+              <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                {waiterRequests.map((request, index) => (
+                  <div 
+                    key={index} 
+                    className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">Table {request.tableId}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Customer: {request.customerName}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                          {new Date(request.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20"
+                        onClick={() => {
+                          // Mark as completed
+                          setWaiterRequests(prev => 
+                            prev.filter((_, i) => i !== index)
+                          );
+                          
+                          // If no more requests, close dialog
+                          if (waiterRequests.length === 1) {
+                            setIsWaiterDialogOpen(false);
+                          }
+                        }}
+                      >
+                        <span className="material-icons text-sm mr-1">check</span>
+                        Complete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">No active waiter requests</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              onClick={() => setIsWaiterDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
