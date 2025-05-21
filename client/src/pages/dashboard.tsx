@@ -16,9 +16,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Toast, ToastProvider, ToastViewport } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 
+interface WaiterRequest {
+  restaurantId: number;
+  tableId: number;
+  customerName: string;
+  timestamp: string;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const restaurantId = user?.restaurantId;
+  const { toast } = useToast();
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month'>('today');
   const [stats, setStats] = useState({
     orderCount: 0,
@@ -27,10 +35,40 @@ export default function Dashboard() {
     activeTables: 0,
     totalTables: 0
   });
+  const [waiterRequests, setWaiterRequests] = useState<WaiterRequest[]>([]);
+  const [selectedWaiterRequest, setSelectedWaiterRequest] = useState<WaiterRequest | null>(null);
+  const [isWaiterDialogOpen, setIsWaiterDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Connect to WebSocket for real-time updates
-  useSocket(restaurantId);
+  const { addEventListener } = useSocket(restaurantId);
+  
+  // Listen for waiter requests
+  useEffect(() => {
+    const handleWaiterRequest = (request: WaiterRequest) => {
+      // Add new request to the list
+      setWaiterRequests(prev => [request, ...prev]);
+      
+      // Show notification
+      toast({
+        title: "Waiter Requested",
+        description: `Table ${request.tableId}: ${request.customerName} needs assistance`,
+        variant: "default"
+      });
+      
+      // Play notification sound
+      const audio = new Audio('/notification.mp3');
+      audio.play().catch(e => console.log('Error playing notification sound', e));
+    };
+    
+    // Register event listener
+    addEventListener('waiter-requested', handleWaiterRequest);
+    
+    // Cleanup
+    return () => {
+      // No need to remove event listener, this is handled by the useSocket hook cleanup
+    };
+  }, [addEventListener, toast]);
 
   useEffect(() => {
     const fetchStats = async () => {
