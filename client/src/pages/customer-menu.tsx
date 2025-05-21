@@ -29,7 +29,7 @@ export default function CustomerMenu() {
   const { toast } = useToast();
   
   // Connect to WebSocket for real-time updates
-  useSocket(parseInt(restaurantId), parseInt(tableId));
+  const { sendMessage } = useSocket(parseInt(restaurantId), parseInt(tableId));
   
   const [restaurant, setRestaurant] = useState<any>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -42,6 +42,8 @@ export default function CustomerMenu() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isOrderingDialogOpen, setIsOrderingDialogOpen] = useState(false);
   const [isOrderSuccessDialogOpen, setIsOrderSuccessDialogOpen] = useState(false);
+  const [isCallWaiterDialogOpen, setIsCallWaiterDialogOpen] = useState(false);
+  const [waiterRequestSent, setWaiterRequestSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch restaurant and menu items
@@ -140,6 +142,44 @@ export default function CustomerMenu() {
 
   // Calculate total cart items
   const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
+  
+  // Call waiter function
+  const callWaiter = () => {
+    if (!customerName.trim()) {
+      setIsCallWaiterDialogOpen(true);
+      return;
+    }
+    
+    sendWaiterRequest();
+  };
+  
+  // Send waiter request via WebSocket
+  const sendWaiterRequest = () => {
+    if (!restaurantId || !tableId) return;
+    
+    sendMessage({
+      type: 'call-waiter',
+      payload: {
+        restaurantId: parseInt(restaurantId),
+        tableId: parseInt(tableId),
+        customerName: customerName.trim() || 'Guest',
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    setIsCallWaiterDialogOpen(false);
+    setWaiterRequestSent(true);
+    
+    toast({
+      title: "Waiter called",
+      description: "A staff member will be with you shortly",
+    });
+    
+    // Reset waiter request status after 30 seconds
+    setTimeout(() => {
+      setWaiterRequestSent(false);
+    }, 30000);
+  };
 
   // Place order
   const placeOrder = async () => {
