@@ -28,7 +28,36 @@ export default function Orders() {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   // Connect to WebSocket for real-time updates
-  useSocket(restaurantId);
+  const { addEventListener } = useSocket(restaurantId);
+  
+  // Listen for new orders
+  useEffect(() => {
+    const handleNewOrder = (orderData: any) => {
+      // Play notification sound
+      const audio = new Audio('/notification.mp3');
+      audio.play().catch(e => console.log('Error playing notification sound', e));
+      
+      // Show desktop notification if browser supports it
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('New Order Received', {
+          body: `Order from ${orderData.customerName} at Table ${orderData.tableId}`,
+          icon: '/logo.png'
+        });
+      }
+    };
+    
+    // Register event listener
+    addEventListener('new-order-received', handleNewOrder);
+    
+    // Request notification permission
+    if ('Notification' in window && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+    
+    return () => {
+      // Cleanup happens in the useSocket hook
+    };
+  }, [addEventListener]);
 
   // Filter orders based on search term
   useEffect(() => {
@@ -213,8 +242,15 @@ export default function Orders() {
                 <ul className="space-y-2">
                   {selectedOrder.items?.map((item: any) => (
                     <li key={item.id} className="flex justify-between">
-                      <span>{item.quantity}x Item #{item.menuItemId}</span>
-                      <span>${parseFloat(item.price).toFixed(2)}</span>
+                      <div className="flex-1">
+                        <span className="font-medium">{item.quantity}x {item.menuItem?.name || `Item #${item.menuItemId}`}</span>
+                        {item.menuItem?.description && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate max-w-[200px]">
+                            {item.menuItem.description}
+                          </p>
+                        )}
+                      </div>
+                      <span className="ml-4 whitespace-nowrap">${parseFloat(item.price).toFixed(2)}</span>
                     </li>
                   ))}
                 </ul>
