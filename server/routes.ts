@@ -24,6 +24,11 @@ const dateRangeSchema = z.object({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up session
   app.use(session(sessionConfig));
+  
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is running' });
+  });
 
   // Authentication Routes
   app.post('/api/auth/login', async (req, res) => {
