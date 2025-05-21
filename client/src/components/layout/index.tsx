@@ -1,7 +1,7 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Sidebar } from "./sidebar";
 import { MobileMenu } from "./mobile-menu";
-import { useLocation, useRoute } from "wouter";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 
 interface LayoutProps {
@@ -19,11 +19,28 @@ export function Layout({
   requireAuth = true,
   allowedRoles = []
 }: LayoutProps) {
-  const [location, setLocation] = useLocation();
+  const [location, navigate] = useLocation();
   const { user, loading } = useAuth();
+  const [authChecked, setAuthChecked] = useState(false);
   
+  useEffect(() => {
+    // Authentication and authorization logic
+    if (loading) return;
+    
+    if (requireAuth && !user) {
+      navigate("/login");
+    } else if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+      if (user.role === 'platform_admin') {
+        navigate("/admin");
+      } else if (user.role === 'restaurant') {
+        navigate("/dashboard");
+      }
+    }
+    setAuthChecked(true);
+  }, [loading, user, requireAuth, allowedRoles, navigate]);
+
   // Show loading state
-  if (loading) {
+  if (loading || !authChecked) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin w-8 h-8 border-4 border-brand border-t-transparent rounded-full"></div>
@@ -31,26 +48,13 @@ export function Layout({
     );
   }
   
-  // Redirect to login if authentication is required but user is not logged in
-  useEffect(() => {
-    if (requireAuth && !user) {
-      setLocation("/login");
-    } else if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-      // Redirect based on role
-      if (user.role === 'platform_admin') {
-        setLocation("/admin");
-      } else if (user.role === 'restaurant') {
-        setLocation("/dashboard");
-      }
-    }
-  }, [requireAuth, user, allowedRoles, setLocation]);
-  
-  // Return null during redirects
+  // Don't render the protected content if auth check failed
   if ((requireAuth && !user) || 
       (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role))) {
     return null;
   }
 
+  // Main layout
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar (desktop only) */}
