@@ -278,16 +278,30 @@ export default function CustomerMenu() {
         {/* Restaurant Header */}
         <div className="relative h-40 bg-gradient-to-r from-red-500 to-red-700">
           <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-black bg-opacity-50">
-            <div className="flex items-center">
-              <div className="w-16 h-16 rounded-full bg-white p-1 shadow-lg">
-                <div className="w-full h-full rounded-full bg-brand flex items-center justify-center text-white font-bold text-xl">
-                  {restaurant?.name ? restaurant.name.substring(0, 2).toUpperCase() : "RE"}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-16 h-16 rounded-full bg-white p-1 shadow-lg">
+                  <div className="w-full h-full rounded-full bg-brand flex items-center justify-center text-white font-bold text-xl">
+                    {restaurant?.name ? restaurant.name.substring(0, 2).toUpperCase() : "RE"}
+                  </div>
+                </div>
+                <div className="ml-3">
+                  <h1 className="text-xl font-bold text-white">{restaurant?.name || "Restaurant"}</h1>
+                  <p className="text-sm text-gray-200">Table {tableId}</p>
                 </div>
               </div>
-              <div className="ml-3">
-                <h1 className="text-xl font-bold text-white">{restaurant?.name || "Restaurant"}</h1>
-                <p className="text-sm text-gray-200">Table {tableId}</p>
-              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="bg-white text-brand hover:bg-gray-100"
+                onClick={callWaiter}
+                disabled={waiterRequestSent}
+              >
+                <span className="material-icons mr-1 text-sm">
+                  {waiterRequestSent ? "check_circle" : "pan_tool"}
+                </span>
+                {waiterRequestSent ? "Waiter Coming" : "Call Waiter"}
+              </Button>
             </div>
           </div>
         </div>
@@ -507,6 +521,45 @@ export default function CustomerMenu() {
               OK
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Call Waiter Dialog */}
+      <Dialog open={isCallWaiterDialogOpen} onOpenChange={setIsCallWaiterDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Call a Waiter</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <p className="text-gray-500 dark:text-gray-400">
+              Please enter your name so the waiter knows who to assist.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Your Name</label>
+              <Input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Enter your name"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsCallWaiterDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={sendWaiterRequest}
+              className="bg-brand hover:bg-red-700 text-white"
+            >
+              Call Waiter
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

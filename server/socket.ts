@@ -19,6 +19,13 @@ export interface NewOrder {
   order: any;
 }
 
+export interface WaiterRequest {
+  restaurantId: number;
+  tableId: number;
+  customerName: string;
+  timestamp: string;
+}
+
 // Client tracking
 type SocketClient = {
   socket: WebSocket;
@@ -76,6 +83,17 @@ export const setupWebSocketServer = (server: HttpServer) => {
             broadcastToRestaurant(orderData.restaurantId, {
               type: 'new-order-received',
               payload: orderData.order
+            });
+            break;
+            
+          case 'call-waiter':
+            // Handle waiter request
+            const waiterRequest: WaiterRequest = message.payload;
+            
+            // Broadcast to restaurant staff
+            broadcastToRestaurant(waiterRequest.restaurantId, {
+              type: 'waiter-requested',
+              payload: waiterRequest
             });
             break;
         }
