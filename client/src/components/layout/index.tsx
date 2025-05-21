@@ -19,7 +19,7 @@ export function Layout({
   requireAuth = true,
   allowedRoles = []
 }: LayoutProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, loading } = useAuth();
   
   // Show loading state
@@ -30,8 +30,6 @@ export function Layout({
       </div>
     );
   }
-  
-  const [, setLocation] = useLocation();
   
   // Redirect to login if authentication is required but user is not logged in
   useEffect(() => {
