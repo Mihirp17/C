@@ -527,13 +527,25 @@ export default function CustomerMenu() {
             </div>
             <h2 className="text-xl font-bold mb-2">Order Placed Successfully!</h2>
             <p className="text-gray-500 dark:text-gray-400 mb-4">
-              Your order has been received and is being processed. You can follow the status of your order on this page.
+              Your order has been received and is being processed. The staff will prepare it shortly.
             </p>
+            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-left">
+              <h3 className="font-medium text-sm text-gray-600 dark:text-gray-300 mb-2">Order Status:</h3>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                <span className="text-sm">Being prepared</span>
+              </div>
+              <div className="relative mt-2">
+                <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200 dark:bg-gray-700">
+                  <div className="w-1/3 shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-brand"></div>
+                </div>
+              </div>
+            </div>
             <Button
               className="w-full bg-brand hover:bg-red-700 text-white"
               onClick={() => setIsOrderSuccessDialogOpen(false)}
             >
-              OK
+              Track My Order
             </Button>
           </div>
         </DialogContent>

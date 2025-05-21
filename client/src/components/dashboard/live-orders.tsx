@@ -66,59 +66,81 @@ export function LiveOrders({ restaurantId }: LiveOrdersProps) {
         )}
       </div>
       
-      <div className="overflow-x-auto">
+      <div className="p-4">
         {orders && orders.length > 0 ? (
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order ID</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Table</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Items</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {orders.map((order) => {
-                const statusColors = getStatusColor(order.status);
-                const nextStatus = getNextStatus(order.status);
-                
-                return (
-                  <tr key={order.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900 dark:text-gray-300">#{order.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{order.customerName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">Table {order.tableId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{order.items?.length || 0} items</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${parseFloat(order.total).toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {orders.map((order) => {
+              const statusColors = getStatusColor(order.status);
+              const nextStatus = getNextStatus(order.status);
+              
+              return (
+                <div 
+                  key={order.id} 
+                  className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-4 ${
+                    order.status === 'pending' 
+                      ? 'border-amber-500' 
+                      : order.status === 'confirmed' 
+                      ? 'border-blue-500' 
+                      : order.status === 'preparing' 
+                      ? 'border-purple-500' 
+                      : order.status === 'served' 
+                      ? 'border-green-500' 
+                      : 'border-gray-300'
+                  } overflow-hidden`}
+                >
+                  <div className="p-4">
+                    <div className="flex justify-between mb-3">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">Order #{order.id}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{calculateTimeAgo(order.createdAt)}</p>
+                      </div>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors.bgClass} ${statusColors.textClass} ${statusColors.darkBgClass} ${statusColors.darkTextClass}`}>
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{calculateTimeAgo(order.createdAt)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
+                    </div>
+                    
+                    <div className="mb-3">
+                      <div className="flex justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Customer:</span>
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">{order.customerName}</span>
+                      </div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Table:</span>
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">Table {order.tableId}</span>
+                      </div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Items:</span>
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">{order.items?.length || 0} items</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Total:</span>
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">${parseFloat(order.total).toFixed(2)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {order.items && order.items.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-gray-700 rounded p-2 max-h-32 overflow-y-auto">
+                          <ul className="space-y-1">
+                            {order.items.map((item: any, index: number) => (
+                              <li key={index} className="text-xs">
+                                <span className="font-medium">{item.quantity}x</span> {item.menuItem?.name || `Item #${item.menuItemId}`}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      <div className="flex space-x-2">
                         {nextStatus && (
                           <Button
-                            size="sm"
-                            className="bg-brand hover:bg-red-700 text-white text-xs py-1 px-2 h-auto"
+                            className="flex-1 bg-brand hover:bg-red-700 text-white text-xs py-1 px-2 h-auto"
                             onClick={() => handleUpdateStatus(order.id, nextStatus.value)}
                           >
                             {nextStatus.label}
                           </Button>
                         )}
                         <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-brand hover:text-red-800 dark:hover:text-red-400 text-xs py-1 px-2 h-auto"
-                        >
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
                           variant="outline"
                           className="text-red-600 hover:text-red-800 text-xs py-1 px-2 h-auto"
                           onClick={() => handleUpdateStatus(order.id, 'cancelled')}
@@ -126,12 +148,12 @@ export function LiveOrders({ restaurantId }: LiveOrdersProps) {
                           Cancel
                         </Button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">No active orders</p>

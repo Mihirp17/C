@@ -418,7 +418,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get the complete order with items
       const items = await storage.getOrderItemsByOrderId(order.id);
-      const completeOrder = { ...order, items };
+      
+      // Fetch menu item details for each order item
+      const itemsWithDetails = await Promise.all(
+        items.map(async (item) => {
+          const menuItem = await storage.getMenuItem(item.menuItemId);
+          return {
+            ...item,
+            menuItem
+          };
+        })
+      );
+      
+      const completeOrder = { ...order, items: itemsWithDetails };
+      
+      // Send real-time notification to restaurant
+      const { WebSocket } = await import('ws');
+      const clients = (global as any).wsClients || [];
+      
+      // Send to all restaurant staff clients
+      clients.forEach((client: any) => {
+        if (
+          client.restaurantId === restaurantId && 
+          client.socket.readyState === WebSocket.OPEN
+        ) {
+          client.socket.send(JSON.stringify({
+            type: 'new-order-received',
+            payload: completeOrder
+          }));
+        }
+      });
 
       return res.status(201).json(completeOrder);
     } catch (error) {
