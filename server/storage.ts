@@ -81,9 +81,121 @@ export interface IStorage {
   
   // Stripe related helpers
   updateRestaurantStripeInfo(restaurantId: number, stripeCustomerId: string, stripeSubscriptionId: string): Promise<Restaurant | undefined>;
+
+  // Mock menu items for test restaurant
+  getMenuItems(restaurantId: number): Promise<MenuItem[]>;
 }
 
+// Mock menu items for test restaurant
+const mockMenuItems = [
+  {
+    id: 1,
+    name: "Classic Margherita",
+    description: "Fresh tomatoes, mozzarella, basil, and olive oil",
+    price: "12.99",
+    category: "Pizza",
+    isAvailable: true,
+    image: null
+  },
+  {
+    id: 2,
+    name: "Pepperoni Feast",
+    description: "Loaded with pepperoni and extra cheese",
+    price: "14.99",
+    category: "Pizza",
+    isAvailable: true,
+    image: null
+  },
+  {
+    id: 3,
+    name: "Garlic Bread",
+    description: "Toasted bread with garlic butter and herbs",
+    price: "5.99",
+    category: "Starters",
+    isAvailable: true,
+    image: null
+  },
+  {
+    id: 4,
+    name: "Caesar Salad",
+    description: "Fresh romaine lettuce, croutons, parmesan, and Caesar dressing",
+    price: "8.99",
+    category: "Starters",
+    isAvailable: true,
+    image: null
+  },
+  {
+    id: 5,
+    name: "Spaghetti Bolognese",
+    description: "Classic pasta with meat sauce and parmesan",
+    price: "13.99",
+    category: "Pasta",
+    isAvailable: true,
+    image: null
+  },
+  {
+    id: 6,
+    name: "Fettuccine Alfredo",
+    description: "Creamy parmesan sauce with garlic and herbs",
+    price: "12.99",
+    category: "Pasta",
+    isAvailable: true,
+    image: null
+  },
+  {
+    id: 7,
+    name: "Chocolate Lava Cake",
+    description: "Warm chocolate cake with a molten center, served with vanilla ice cream",
+    price: "7.99",
+    category: "Desserts",
+    isAvailable: true,
+    image: null
+  },
+  {
+    id: 8,
+    name: "Tiramisu",
+    description: "Classic Italian dessert with coffee-soaked ladyfingers and mascarpone cream",
+    price: "6.99",
+    category: "Desserts",
+    isAvailable: true,
+    image: null
+  },
+  {
+    id: 9,
+    name: "Soft Drinks",
+    description: "Choice of Coke, Sprite, Fanta, or Diet Coke",
+    price: "2.99",
+    category: "Drinks",
+    isAvailable: true,
+    image: null
+  },
+  {
+    id: 10,
+    name: "Fresh Lemonade",
+    description: "Homemade lemonade with mint",
+    price: "3.99",
+    category: "Drinks",
+    isAvailable: true,
+    image: null
+  }
+];
+
 export class DatabaseStorage implements IStorage {
+  constructor() {
+    this.initializeDefaultAdmin();
+  }
+
+  private async initializeDefaultAdmin() {
+    const admin = await this.getPlatformAdminByEmail('admin@restomate.com');
+    if (!admin) {
+      await this.createPlatformAdmin({
+        email: 'admin@restomate.com',
+        password: 'admin123',
+        name: 'System Admin'
+      });
+    }
+  }
+
   // Platform Admin Methods
   async getPlatformAdmin(id: number): Promise<PlatformAdmin | undefined> {
     const [admin] = await db.select().from(platformAdmins).where(eq(platformAdmins.id, id));
@@ -479,6 +591,12 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await this.getRestaurant(restaurantId);
+  }
+
+  // Mock menu items for test restaurant
+  async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
+    // Fetch menu items from the database for the given restaurant
+    return await db.select().from(menuItems).where(eq(menuItems.restaurantId, restaurantId));
   }
 }
 

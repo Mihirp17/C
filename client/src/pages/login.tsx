@@ -44,7 +44,7 @@ export default function Login() {
       
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold text-brand">FoodieManager</CardTitle>
+          <CardTitle className="text-2xl font-bold text-blue-600">Restomate</CardTitle>
           <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         
@@ -87,7 +87,7 @@ export default function Login() {
             
             <Button 
               type="submit" 
-              className="w-full bg-brand hover:bg-red-700 text-white"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               disabled={isLoginPending}
             >
               {isLoginPending ? (

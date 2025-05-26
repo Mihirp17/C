@@ -5,9 +5,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from "recharts";
 import { formatCurrency } from "@/lib/utils";
+import { useSocket } from "@/hooks/use-socket";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const { addEventListener, removeEventListener } = useSocket();
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalRestaurants: 0,
@@ -19,6 +21,7 @@ export default function AdminDashboard() {
       { name: "Enterprise", value: 0 }
     ]
   });
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
   // Mock revenue data for chart
   const revenueData = [
@@ -102,6 +105,48 @@ export default function AdminDashboard() {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    const fetchRecentActivities = async () => {
+      const response = await fetch("/api/recent-activities", { credentials: "include" });
+      const activities = await response.json();
+      setRecentActivities(activities);
+    };
+
+    fetchRecentActivities();
+
+    const handleNewActivity = (activity: any) => {
+      setRecentActivities((prev) => [activity, ...prev].slice(0, 10));
+    };
+
+    addEventListener("new-activity", handleNewActivity);
+
+    return () => {
+      removeEventListener("new-activity", handleNewActivity);
+    };
+  }, [addEventListener, removeEventListener]);
+
+  const handleAddNewTable = async (tableData) => {
+    try {
+      const response = await apiRequest("POST", `/api/restaurants/${restaurantId}/tables`, tableData);
+      if (response.ok) {
+        toast({
+          title: "Table added",
+          description: "The new table has been successfully added."
+        });
+        // Refresh the tables list
+        queryClient.invalidateQueries([`/api/restaurants/${restaurantId}/tables`]);
+      } else {
+        throw new Error("Failed to add table");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add table",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Layout
       title="Platform Administration"
@@ -112,14 +157,14 @@ export default function AdminDashboard() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
+          <Card className="border-blue-100 dark:border-blue-900">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">
                 Total Restaurants
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                 {isLoading ? "Loading..." : stats.totalRestaurants}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -128,14 +173,14 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="border-blue-100 dark:border-blue-900">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">
                 Active Subscriptions
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                 {isLoading ? "Loading..." : stats.activeSubscriptions}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -144,18 +189,18 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="border-blue-100 dark:border-blue-900">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Monthly Recurring Revenue
+              <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                Total Revenue
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {isLoading ? "Loading..." : formatCurrency(stats.totalRevenue)}
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                {isLoading ? "Loading..." : `$${stats.totalRevenue.toLocaleString()}`}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Per month
+                This month
               </p>
             </CardContent>
           </Card>
@@ -229,49 +274,18 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center border-b border-gray-200 dark:border-gray-700 pb-4">
-                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 mr-3">
-                  <span className="material-icons">restaurant</span>
+              {recentActivities.map((activity, index) => (
+                <div key={index} className="flex items-center border-b border-gray-200 dark:border-gray-700 pb-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${activity.iconBgClass}`}>
+                    <span className={`material-icons ${activity.iconColor}`}>{activity.icon}</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{activity.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{activity.description}</p>
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{activity.timeAgo}</div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">New Restaurant Registration</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Seaside Cafe just joined the platform</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</div>
-              </div>
-              
-              <div className="flex items-center border-b border-gray-200 dark:border-gray-700 pb-4">
-                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-3">
-                  <span className="material-icons">credit_card</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Subscription Upgraded</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Vegan Garden upgraded to Enterprise plan</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">5 hours ago</div>
-              </div>
-              
-              <div className="flex items-center border-b border-gray-200 dark:border-gray-700 pb-4">
-                <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-600 dark:text-yellow-400 mr-3">
-                  <span className="material-icons">warning</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Payment Failed</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Urban Eats payment failed - retry scheduled</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">1 day ago</div>
-              </div>
-              
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 mr-3">
-                  <span className="material-icons">cancel</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Subscription Cancelled</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Thai Palace cancelled their subscription</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">2 days ago</div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>

@@ -1,18 +1,32 @@
 import { useTables } from "@/hooks/use-tables";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Table } from "@shared/schema";
 
 interface TablesOverviewProps {
   restaurantId?: number;
 }
 
 export function TablesOverview({ restaurantId }: TablesOverviewProps) {
-  const { tables, isLoading, updateTable } = useTables(restaurantId || 0);
+  const queryClient = useQueryClient();
+  const { tables = [], isLoading, updateTable } = useTables(restaurantId || 0) as {
+    tables: Table[];
+    isLoading: boolean;
+    updateTable: (args: { tableId: number; data: { isOccupied: boolean } }) => void;
+  };
 
   // Toggle table occupancy status
   const handleToggleOccupied = (tableId: number, isOccupied: boolean) => {
     updateTable({ tableId, data: { isOccupied: !isOccupied } });
   };
+
+  useEffect(() => {
+    if (restaurantId) {
+      queryClient.invalidateQueries({ queryKey: [`/api/restaurants/${restaurantId}/tables`] });
+    }
+  }, [restaurantId]);
 
   if (isLoading) {
     return (

@@ -1,7 +1,7 @@
 // Socket.io client implementation
 export interface SocketMessage {
   type: string;
-  payload: any;
+  payload: Record<string, unknown>;
 }
 
 let socket: WebSocket | null = null;

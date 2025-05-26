@@ -4,6 +4,7 @@ import { StatsCard } from "@/components/dashboard/stats-card";
 import { LiveOrders } from "@/components/dashboard/live-orders";
 import { TablesOverview } from "@/components/dashboard/tables-overview";
 import { PopularItems } from "@/components/dashboard/popular-items";
+import { StaffOrderDialog } from "@/components/menu/staff-order-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/hooks/use-socket";
 import { apiRequest } from "@/lib/queryClient";
@@ -15,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Toast, ToastProvider, ToastViewport } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
+import { useTables, Table } from "@/hooks/use-tables";
 
 interface WaiterRequest {
   restaurantId: number;
@@ -27,6 +29,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const restaurantId = user?.restaurantId;
   const { toast } = useToast();
+  const { tables: rawTables = [], isLoading: isTablesLoading } = useTables(restaurantId!);
+  const tables: Table[] = Array.isArray(rawTables) ? rawTables : [];
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month'>('today');
   const [stats, setStats] = useState({
     orderCount: 0,
@@ -38,7 +42,10 @@ export default function Dashboard() {
   const [waiterRequests, setWaiterRequests] = useState<WaiterRequest[]>([]);
   const [selectedWaiterRequest, setSelectedWaiterRequest] = useState<WaiterRequest | null>(null);
   const [isWaiterDialogOpen, setIsWaiterDialogOpen] = useState(false);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
 
   // Connect to WebSocket for real-time updates
   const { addEventListener } = useSocket(restaurantId);
@@ -168,7 +175,10 @@ export default function Dashboard() {
                 <SelectItem value="month">This Month</SelectItem>
               </SelectContent>
             </Select>
-            <Button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">
+            <Button 
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              onClick={() => setIsOrderDialogOpen(true)}
+            >
               <span className="material-icons mr-2 text-sm">add</span>
               New Order
             </Button>
@@ -308,6 +318,65 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Table Selection Dialog */}
+      <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Start New Order</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {isTablesLoading ? (
+              <div className="text-center text-gray-500">Loading tables...</div>
+            ) : (
+              <>
+                <label className="block mb-2 font-medium">Select a vacant table:</label>
+                <select
+                  className="w-full border rounded p-2 mb-4"
+                  value={selectedTableId ?? ''}
+                  onChange={e => setSelectedTableId(Number(e.target.value))}
+                >
+                  <option value="" disabled>Select table</option>
+                  {tables.filter((t: Table) => !t.isOccupied).map((table: Table) => (
+                    <option key={table.id} value={table.id}>
+                      Table {table.number}
+                    </option>
+                  ))}
+                </select>
+                <Button 
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={!selectedTableId}
+                  onClick={() => {
+                    // Close table selection and open order dialog
+                    setIsOrderDialogOpen(false);
+                    setShowOrderDialog(true);
+                  }}
+                >
+                  Start Order
+                </Button>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsOrderDialogOpen(false)} variant="outline">
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Staff Order Dialog */}
+      <StaffOrderDialog
+        restaurantId={restaurantId!}
+        selectedTableId={selectedTableId!}
+        isOpen={showOrderDialog}
+        onOpenChange={setShowOrderDialog}
+        onOrderPlaced={() => {
+          // Reset state and refresh data
+          setSelectedTableId(null);
+          setShowOrderDialog(false);
+        }}
+      />
     </Layout>
   );
 }

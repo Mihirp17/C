@@ -27,6 +27,12 @@ export interface Order {
   items: OrderItem[];
 }
 
+export type NewOrderItem = Omit<OrderItem, 'id' | 'orderId' | 'createdAt' | 'updatedAt'>;
+
+export interface NewOrder extends Omit<Order, 'id' | 'createdAt' | 'updatedAt'> {
+  items: NewOrderItem[];
+}
+
 // Hook to fetch all orders for a restaurant
 export function useOrders(restaurantId: number) {
   const queryClient = useQueryClient();
@@ -72,8 +78,19 @@ export function useOrders(restaurantId: number) {
   
   // Create order mutation
   const createOrderMutation = useMutation({
-    mutationFn: async (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
-      const response = await apiRequest('POST', `/api/restaurants/${restaurantId}/orders`, order);
+    mutationFn: async (orderData: {
+      customerName: string;
+      tableId: number;
+      restaurantId: number;
+      status: OrderStatus;
+      total: string;
+      items: Array<{
+        menuItemId: number;
+        quantity: number;
+        price: string;
+      }>;
+    }) => {
+      const response = await apiRequest('POST', `/api/restaurants/${restaurantId}/orders`, orderData);
       return response.json();
     },
     onSuccess: () => {

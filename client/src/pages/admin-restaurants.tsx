@@ -190,7 +190,7 @@ export default function AdminRestaurants() {
           </div>
           <Button 
             onClick={handleAddNew}
-            className="bg-brand hover:bg-red-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
           >
             <span className="material-icons mr-2 text-sm">add</span>
             Add Restaurant
@@ -287,7 +287,7 @@ export default function AdminRestaurants() {
                 <Button 
                   onClick={handleAddNew}
                   variant="outline"
-                  className="mt-4"
+                  className="mt-4 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold"
                 >
                   Add your first restaurant
                 </Button>
@@ -299,21 +299,21 @@ export default function AdminRestaurants() {
 
       {/* Restaurant Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{editingRestaurant ? "Edit Restaurant" : "Add Restaurant"}</DialogTitle>
+            <DialogTitle className="text-lg">{editingRestaurant ? "Edit Restaurant" : "Add Restaurant"}</DialogTitle>
           </DialogHeader>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Restaurant Name</FormLabel>
+                    <FormLabel className="text-sm">Restaurant Name</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g. John's Bistro" />
+                      <Input {...field} placeholder="e.g. John's Bistro" className="h-9" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -325,9 +325,9 @@ export default function AdminRestaurants() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-sm">Email</FormLabel>
                     <FormControl>
-                      <Input {...field} type="email" placeholder="e.g. contact@restaurant.com" />
+                      <Input {...field} type="email" placeholder="e.g. contact@restaurant.com" className="h-9" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -340,9 +340,9 @@ export default function AdminRestaurants() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel className="text-sm">Password</FormLabel>
                       <FormControl>
-                        <Input {...field} type="password" placeholder="Enter password" />
+                        <Input {...field} type="password" placeholder="Enter password" className="h-9" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -355,12 +355,13 @@ export default function AdminRestaurants() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel className="text-sm">Description</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
                         placeholder="Describe the restaurant..."
                         value={field.value || ""}
+                        className="min-h-[80px]"
                       />
                     </FormControl>
                     <FormMessage />
@@ -368,15 +369,15 @@ export default function AdminRestaurants() {
                 )}
               />
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone</FormLabel>
+                      <FormLabel className="text-sm">Phone</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="e.g. (123) 456-7890" value={field.value || ""} />
+                        <Input {...field} placeholder="e.g. (123) 456-7890" value={field.value || ""} className="h-9" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -388,9 +389,9 @@ export default function AdminRestaurants() {
                   name="logo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Logo URL</FormLabel>
+                      <FormLabel className="text-sm">Logo URL</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="https://..." value={field.value || ""} />
+                        <Input {...field} placeholder="https://..." value={field.value || ""} className="h-9" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -403,13 +404,14 @@ export default function AdminRestaurants() {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel className="text-sm">Address</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
                         placeholder="Full address..."
                         rows={2}
                         value={field.value || ""}
+                        className="min-h-[60px]"
                       />
                     </FormControl>
                     <FormMessage />
@@ -421,10 +423,10 @@ export default function AdminRestaurants() {
                 control={form.control}
                 name="isActive"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-2">
                     <div className="space-y-0.5">
-                      <FormLabel>Active</FormLabel>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <FormLabel className="text-sm">Active</FormLabel>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Restaurant will be accessible to customers
                       </p>
                     </div>
@@ -438,17 +440,18 @@ export default function AdminRestaurants() {
                 )}
               />
               
-              <DialogFooter>
+              <DialogFooter className="gap-2">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setIsDialogOpen(false)}
+                  className="h-9"
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="bg-brand hover:bg-red-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md h-9"
                   disabled={form.formState.isSubmitting}
                 >
                   {form.formState.isSubmitting ? (

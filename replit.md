@@ -1,8 +1,8 @@
-# FoodieManager - Restaurant Management Platform
+# Restomate - Restaurant Management Platform
 
 ## Overview
 
-FoodieManager is a multi-tenant restaurant management platform that enables restaurants to manage menus, tables, and orders with QR code ordering for customers. The application follows a full-stack architecture with a clear separation between client and server. The system allows platform administrators to manage restaurants and subscriptions, while restaurant owners can manage their menus, tables, orders, and view analytics.
+Restomate is a multi-tenant restaurant management platform that enables restaurants to manage menus, tables, and orders with QR code ordering for customers. The application follows a full-stack architecture with a clear separation between client and server. The system allows platform administrators to manage restaurants and subscriptions, while restaurant owners can manage their menus, tables, orders, and view analytics.
 
 ## User Preferences
 

@@ -30,7 +30,7 @@ model Subscription {
   stripeCustomerId String  @unique
   stripeSubscriptionId String @unique
   status        String     // active, canceled, past_due
-  plan          String     // basic, premium, enterprise
+  plan          String     // basic, premium
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
   createdAt     DateTime   @default(now())

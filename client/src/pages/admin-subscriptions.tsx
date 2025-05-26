@@ -22,8 +22,7 @@ export default function AdminSubscriptions() {
   // Define available plans
   const plans = [
     { id: "price_placeholder_basic", name: "Basic", price: "29.99" },
-    { id: "price_placeholder_premium", name: "Premium", price: "49.99" },
-    { id: "price_placeholder_enterprise", name: "Enterprise", price: "99.99" }
+    { id: "price_placeholder_premium", name: "Premium", price: "49.99" }
   ];
 
   // Fetch restaurants with their subscriptions

@@ -26,6 +26,18 @@ const menuItemSchema = z.object({
   isAvailable: z.boolean().default(true)
 });
 
+const DEFAULT_CATEGORIES = [
+  "Tapas",
+  "Salads",
+  "Soups",
+  "Sandwiches and burgers",
+  "Entres",
+  "Pasta and pizza",
+  "Beers",
+  "Drinks",
+  "Alcoholic drinks"
+];
+
 export default function MenuManagement() {
   const { user } = useAuth();
   const restaurantId = user?.restaurantId;
@@ -118,7 +130,8 @@ export default function MenuManagement() {
         await createMenuItem({
           ...data,
           restaurantId: restaurantId!,
-          price: data.price
+          price: data.price,
+          description: data.description ?? null
         });
         toast({
           title: "Menu item created",
@@ -164,9 +177,10 @@ export default function MenuManagement() {
             />
             <span className="absolute left-3 top-2.5 text-gray-400 material-icons">search</span>
           </div>
+          {/* Change Add Menu Item button to always be visible and use a standard color */}
           <Button 
             onClick={handleAddNewItem}
-            className="bg-brand hover:bg-red-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
           >
             <span className="material-icons mr-2 text-sm">add</span>
             Add Menu Item
@@ -280,6 +294,7 @@ export default function MenuManagement() {
                   )}
                 />
                 
+                {/* In the category dropdown, always show all default categories */}
                 <FormField
                   control={form.control}
                   name="category"
@@ -296,21 +311,11 @@ export default function MenuManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {categories.length > 0 ? (
-                            categories.map(category => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <>
-                              <SelectItem value="Starters">Starters</SelectItem>
-                              <SelectItem value="Main Course">Main Course</SelectItem>
-                              <SelectItem value="Burgers">Burgers</SelectItem>
-                              <SelectItem value="Desserts">Desserts</SelectItem>
-                              <SelectItem value="Drinks">Drinks</SelectItem>
-                            </>
-                          )}
+                          {DEFAULT_CATEGORIES.map(category => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -36,7 +36,7 @@ export function MobileMenu({ active }: MobileMenuProps) {
       {/* Top Header for Mobile */}
       <header className="bg-white dark:bg-gray-800 shadow-sm md:hidden">
         <div className="px-4 sm:px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-brand">FoodieManager</h1>
+          <h1 className="text-lg font-semibold text-blue-600">Restomate</h1>
           <div className="flex items-center space-x-4">
             <ThemeToggle />
             <button 
@@ -66,7 +66,7 @@ export function MobileMenu({ active }: MobileMenuProps) {
           </div>
           <div className="px-4 pt-5 pb-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <h2 className="text-xl font-bold text-brand">FoodieManager</h2>
+              <h2 className="text-xl font-bold text-blue-600">Restomate</h2>
             </div>
           </div>
           <div className="mt-5 flex-1 h-0 overflow-y-auto">

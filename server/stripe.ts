@@ -13,8 +13,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_place
 // Plan IDs for different tiers
 export const PLANS = {
   BASIC: process.env.STRIPE_BASIC_PLAN_ID || 'price_placeholder_basic',
-  PREMIUM: process.env.STRIPE_PREMIUM_PLAN_ID || 'price_placeholder_premium',
-  ENTERPRISE: process.env.STRIPE_ENTERPRISE_PLAN_ID || 'price_placeholder_enterprise'
+  PREMIUM: process.env.STRIPE_PREMIUM_PLAN_ID || 'price_placeholder_premium'
 };
 
 // Create or update a customer in Stripe

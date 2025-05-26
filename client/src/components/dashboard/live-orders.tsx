@@ -2,29 +2,48 @@ import { useEffect, useState } from "react";
 import { useOrders } from "@/hooks/use-orders";
 import { Button } from "@/components/ui/button";
 import { getStatusColor, calculateTimeAgo } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface LiveOrdersProps {
   restaurantId?: number;
 }
 
 export function LiveOrders({ restaurantId }: LiveOrdersProps) {
-  const { activeOrders, updateOrderStatus, isLoading } = useOrders(restaurantId || 0);
+  const { activeOrders, updateOrderStatus, isLoading } = useOrders(restaurantId || 0) as { activeOrders: any[]; updateOrderStatus: (args: { orderId: number; status: 'pending' | 'confirmed' | 'preparing' | 'served' | 'completed' | 'cancelled' }) => void; isLoading: boolean };
   const [orders, setOrders] = useState<any[]>([]);
+  const { toast } = useToast();
 
   // Update orders when activeOrders changes
   useEffect(() => {
-    if (activeOrders) {
+    if (Array.isArray(activeOrders)) {
       setOrders(activeOrders);
     }
   }, [activeOrders]);
 
   // Handle order status update
-  const handleUpdateStatus = (orderId: number, status: string) => {
-    updateOrderStatus({ orderId, status });
+  const handleUpdateStatus = async (
+    orderId: number,
+    status: 'pending' | 'confirmed' | 'preparing' | 'served' | 'completed' | 'cancelled'
+  ) => {
+    try {
+      await updateOrderStatus({ orderId, status });
+      toast({
+        title: "Success",
+        description: `Order #${orderId} status updated to ${status}.`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update order status. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Get next status options based on current status
-  const getNextStatus = (currentStatus: string): { label: string; value: string } | null => {
+  const getNextStatus = (currentStatus: string): { label: string; value: 'pending' | 'confirmed' | 'preparing' | 'served' | 'completed' | 'cancelled' } | null => {
     switch (currentStatus) {
       case 'pending':
         return { label: 'Confirm', value: 'confirmed' };
@@ -134,7 +153,7 @@ export function LiveOrders({ restaurantId }: LiveOrdersProps) {
                       <div className="flex space-x-2">
                         {nextStatus && (
                           <Button
-                            className="flex-1 bg-brand hover:bg-red-700 text-white text-xs py-1 px-2 h-auto"
+                            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-2 h-auto"
                             onClick={() => handleUpdateStatus(order.id, nextStatus.value)}
                           >
                             {nextStatus.label}

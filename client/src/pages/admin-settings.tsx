@@ -26,8 +26,8 @@ export default function AdminSettings() {
   const [confirmPassword, setConfirmPassword] = useState("");
   
   // Platform settings
-  const [platformName, setPlatformName] = useState("FoodieManager");
-  const [supportEmail, setSupportEmail] = useState("support@foodiemanager.com");
+  const [platformName, setPlatformName] = useState("Restomate");
+  const [supportEmail, setSupportEmail] = useState("support@restomate.com");
   const [stripeEnabled, setStripeEnabled] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 

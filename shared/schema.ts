@@ -35,7 +35,7 @@ export const subscriptions = pgTable("subscriptions", {
   stripeCustomerId: text("stripe_customer_id").notNull().unique(),
   stripeSubscriptionId: text("stripe_subscription_id").notNull().unique(),
   status: text("status").notNull(), // active, canceled, past_due
-  plan: text("plan").notNull(), // basic, premium, enterprise
+  plan: text("plan").notNull(), // basic, premium
   currentPeriodStart: timestamp("current_period_start").notNull(),
   currentPeriodEnd: timestamp("current_period_end").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -60,7 +60,7 @@ export const menuItems = pgTable("menu_items", {
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   image: text("image"),
-  category: text("category").notNull(),
+  category: text("category"),
   isAvailable: boolean("is_available").default(true).notNull(),
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -248,18 +248,6 @@ export default function Subscription() {
         "Priority email support",
         "Custom QR code branding"
       ]
-    },
-    {
-      id: "price_placeholder_enterprise",
-      name: "Enterprise",
-      price: isAnnual ? "83.99" : "99.99",
-      features: [
-        "Unlimited everything",
-        "24/7 phone support",
-        "Custom branding",
-        "API access",
-        "Dedicated account manager"
-      ]
     }
   ];
 

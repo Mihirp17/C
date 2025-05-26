@@ -14,7 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 
 // Form schema for table
 const tableSchema = z.object({
-  number: z.string().refine((val) => !isNaN(parseInt(val)), { message: "Table number must be a number" })
+  number: z.string().refine((val) => !isNaN(parseInt(val)), { message: "Table number must be a number" }),
+  count: z.string().refine((val) => !isNaN(parseInt(val)) && parseInt(val) > 0, { message: "Count must be a positive number" }).optional()
 });
 
 export default function Tables() {
@@ -29,7 +30,8 @@ export default function Tables() {
   const form = useForm<z.infer<typeof tableSchema>>({
     resolver: zodResolver(tableSchema),
     defaultValues: {
-      number: ""
+      number: "",
+      count: "1"
     }
   });
 
@@ -127,7 +129,7 @@ export default function Tables() {
           </h3>
           <Button 
             onClick={handleAddNewTable}
-            className="bg-brand hover:bg-red-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
           >
             <span className="material-icons mr-2 text-sm">add</span>
             Add Table
@@ -158,7 +160,7 @@ export default function Tables() {
             <Button 
               onClick={handleAddNewTable}
               variant="outline"
-              className="mt-4"
+              className="mt-4 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold"
             >
               Add your first table
             </Button>

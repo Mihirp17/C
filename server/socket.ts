@@ -5,7 +5,7 @@ import { storage } from './storage';
 // Define message types
 export interface SocketMessage {
   type: string;
-  payload: any;
+  payload: Record<string, unknown>;
 }
 
 export interface OrderStatusUpdate {

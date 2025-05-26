@@ -22,8 +22,12 @@ const dateRangeSchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  console.log("Starting route registration...");
+  
   // Set up session
+  console.log("Setting up session middleware...");
   app.use(session(sessionConfig));
+  console.log("Session middleware set up successfully");
   
   // Health check endpoint
   app.get('/api/health', (req, res) => {
@@ -31,6 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Authentication Routes
+  console.log("Setting up authentication routes...");
   app.post('/api/auth/login', async (req, res) => {
     try {
       const validation = loginSchema.safeParse(req.body);
@@ -83,8 +88,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     return res.status(401).json({ message: 'Not authenticated' });
   });
+  console.log("Authentication routes set up successfully");
 
   // Restaurant Routes
+  console.log("Setting up restaurant routes...");
   app.get('/api/restaurants', authenticate, authorize(['platform_admin']), async (req, res) => {
     try {
       const restaurants = await storage.getAllRestaurants();
@@ -154,8 +161,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Failed to update restaurant' });
     }
   });
+  console.log("Restaurant routes set up successfully");
 
   // Table Routes
+  console.log("Setting up table routes...");
   app.get('/api/restaurants/:restaurantId/tables', authenticate, authorizeRestaurant, async (req, res) => {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
@@ -250,8 +259,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Failed to delete table' });
     }
   });
+  console.log("Table routes set up successfully");
 
   // Menu Item Routes
+  console.log("Setting up menu item routes...");
   app.get('/api/restaurants/:restaurantId/menu-items', async (req, res) => {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
@@ -259,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid restaurant ID' });
       }
 
-      const menuItems = await storage.getMenuItemsByRestaurantId(restaurantId);
+      const menuItems = await storage.getMenuItems(restaurantId);
       return res.json(menuItems);
     } catch (error) {
       console.error('Error fetching menu items:', error);
@@ -339,8 +350,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Failed to delete menu item' });
     }
   });
+  console.log("Menu item routes set up successfully");
 
   // Order Routes
+  console.log("Setting up order routes...");
   app.get('/api/restaurants/:restaurantId/orders', authenticate, authorizeRestaurant, async (req, res) => {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
@@ -404,6 +417,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!validation.success) {
         return res.status(400).json({ errors: validation.error.errors });
+      }
+
+      // Validate that table exists and belongs to the restaurant
+      const table = await storage.getTable(req.body.tableId);
+      if (!table) {
+        return res.status(400).json({ message: 'Table not found' });
+      }
+      if (table.restaurantId !== restaurantId) {
+        return res.status(400).json({ message: 'Table does not belong to this restaurant' });
       }
 
       // Create the order
@@ -492,8 +514,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Failed to update order' });
     }
   });
+  console.log("Order routes set up successfully");
 
   // Analytics Routes
+  console.log("Setting up analytics routes...");
   app.post('/api/restaurants/:restaurantId/analytics/revenue', authenticate, authorizeRestaurant, async (req, res) => {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
@@ -572,8 +596,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Failed to fetch popular items' });
     }
   });
+  console.log("Analytics routes set up successfully");
 
   // Feedback Routes
+  console.log("Setting up feedback routes...");
   app.post('/api/restaurants/:restaurantId/feedback', async (req, res) => {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
@@ -612,8 +638,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Failed to fetch feedback' });
     }
   });
+  console.log("Feedback routes set up successfully");
 
   // Subscription Routes
+  console.log("Setting up subscription routes...");
   app.post('/api/restaurants/:restaurantId/subscription', authenticate, authorizeRestaurant, async (req, res) => {
     try {
       const restaurantId = parseInt(req.params.restaurantId);
@@ -719,8 +747,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Failed to cancel subscription' });
     }
   });
+  console.log("Subscription routes set up successfully");
 
   // Stripe webhook handler
+  console.log("Setting up Stripe webhook handler...");
   app.post('/api/webhooks/stripe', async (req, res) => {
     const sig = req.headers['stripe-signature'];
     
@@ -743,12 +773,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: 'Webhook error', error: (error as Error).message });
     }
   });
+  console.log("Stripe webhook handler set up successfully");
 
   // Create HTTP server
+  console.log("Creating HTTP server...");
   const httpServer = createServer(app);
+  console.log("HTTP server created successfully");
   
   // Set up WebSockets
+  console.log("Setting up WebSocket server...");
   setupWebSocketServer(httpServer);
+  console.log("WebSocket server set up successfully");
 
+  console.log("Route registration completed successfully");
   return httpServer;
 }
