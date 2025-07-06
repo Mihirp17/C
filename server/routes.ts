@@ -6,7 +6,7 @@ import { sessionConfig, authenticate, authorize, authorizeRestaurant, loginPlatf
 import { setupWebSocketServer } from "./socket";
 import { z } from "zod";
 import { insertRestaurantSchema, insertUserSchema, insertMenuItemSchema, insertTableSchema, insertOrderSchema, insertOrderItemSchema, insertFeedbackSchema } from "@shared/schema";
-import { stripe, createOrUpdateCustomer, createSubscription, updateSubscription, cancelSubscription, generateClientSecret, handleWebhookEvent, PLANS } from "./stripe";
+
 import QRCode from 'qrcode';
 import * as os from 'os';
 import { generateRestaurantInsights, generateMenuOptimizationSuggestions, analyzeFeedbackSentiment } from "./ai";
@@ -780,140 +780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   console.log("Feedback routes set up successfully");
 
-  // Subscription Routes
-  console.log("Setting up subscription routes...");
-  app.post('/api/restaurants/:restaurantId/subscription', authenticate, authorizeRestaurant, async (req, res) => {
-    try {
-      const restaurantId = parseInt(req.params.restaurantId);
-      if (isNaN(restaurantId)) {
-        return res.status(400).json({ message: 'Invalid restaurant ID' });
-      }
 
-      const restaurant = await storage.getRestaurant(restaurantId);
-      if (!restaurant) {
-        return res.status(404).json({ message: 'Restaurant not found' });
-      }
-
-      // Get or create customer
-      const customer = await createOrUpdateCustomer(
-        restaurantId,
-        restaurant.email,
-        restaurant.name
-      );
-
-      // Create subscription
-      const planId = req.body.planId || PLANS.BASIC;
-      const subscription = await createSubscription(
-        restaurantId,
-        customer.id,
-        planId
-      );
-
-      // Get client secret for payment
-      const clientSecret = await generateClientSecret(subscription.id);
-
-      return res.json({
-        subscriptionId: subscription.id,
-        clientSecret
-      });
-    } catch (error) {
-      console.error('Error creating subscription:', error);
-      return res.status(500).json({ message: 'Failed to create subscription' });
-    }
-  });
-
-  app.put('/api/restaurants/:restaurantId/subscription', authenticate, authorizeRestaurant, async (req, res) => {
-    try {
-      const restaurantId = parseInt(req.params.restaurantId);
-      if (isNaN(restaurantId)) {
-        return res.status(400).json({ message: 'Invalid restaurant ID' });
-      }
-
-      // Get the current subscription
-      const currentSubscription = await storage.getSubscriptionByRestaurantId(restaurantId);
-      if (!currentSubscription) {
-        return res.status(404).json({ message: 'Subscription not found' });
-      }
-
-      // Update the subscription
-      const planId = req.body.planId;
-      if (!planId) {
-        return res.status(400).json({ message: 'Plan ID is required' });
-      }
-
-      const updatedSubscription = await updateSubscription(
-        currentSubscription.stripeSubscriptionId,
-        planId
-      );
-
-      return res.json({
-        subscriptionId: updatedSubscription.id,
-        status: updatedSubscription.status
-      });
-    } catch (error) {
-      console.error('Error updating subscription:', error);
-      return res.status(500).json({ message: 'Failed to update subscription' });
-    }
-  });
-
-  app.delete('/api/restaurants/:restaurantId/subscription', authenticate, authorizeRestaurant, async (req, res) => {
-    try {
-      const restaurantId = parseInt(req.params.restaurantId);
-      if (isNaN(restaurantId)) {
-        return res.status(400).json({ message: 'Invalid restaurant ID' });
-      }
-
-      // Get the current subscription
-      const currentSubscription = await storage.getSubscriptionByRestaurantId(restaurantId);
-      if (!currentSubscription) {
-        return res.status(404).json({ message: 'Subscription not found' });
-      }
-
-      // Cancel the subscription
-      const canceledSubscription = await cancelSubscription(
-        currentSubscription.stripeSubscriptionId
-      );
-
-      // Update the status in the database
-      await storage.updateSubscriptionByRestaurantId(restaurantId, {
-        status: 'canceled'
-      });
-
-      return res.json({
-        status: canceledSubscription.status
-      });
-    } catch (error) {
-      console.error('Error canceling subscription:', error);
-      return res.status(500).json({ message: 'Failed to cancel subscription' });
-    }
-  });
-  console.log("Subscription routes set up successfully");
-
-  // Stripe webhook handler
-  console.log("Setting up Stripe webhook handler...");
-  app.post('/api/webhooks/stripe', async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    
-    if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
-      return res.status(400).json({ message: 'Missing stripe signature or webhook secret' });
-    }
-
-    try {
-      const event = stripe.webhooks.constructEvent(
-        req.body,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-
-      await handleWebhookEvent(event);
-      
-      res.json({ received: true });
-    } catch (error) {
-      console.error('Error handling webhook:', error);
-      res.status(400).json({ message: 'Webhook error', error: (error as Error).message });
-    }
-  });
-  console.log("Stripe webhook handler set up successfully");
 
   // Create HTTP server
   console.log("Creating HTTP server...");
