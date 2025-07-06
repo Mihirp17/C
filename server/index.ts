@@ -11,7 +11,7 @@ import cors from "cors";
 console.log("Starting server initialization...");
 console.log("DATABASE_URL:", process.env.DATABASE_URL);
 console.log("SESSION_SECRET:", process.env.SESSION_SECRET);
-console.log("STRIPE_SECRET_KEY:", process.env.STRIPE_SECRET_KEY);
+
 
 // Check for required environment variables
 const requiredEnvVars = ['DATABASE_URL'];
@@ -146,9 +146,9 @@ app.use((req, res, next) => {
           const { setupWebSocketServer } = await import('./socket');
           setupWebSocketServer(httpsServer);
           
-          httpsServer.listen(443, host, () => {
+          httpsServer.listen(443, host, async () => {
             console.log(`HTTPS Server running at https://localhost`);
-            console.log(`Also accessible at https://${getLocalIP()}:443`);
+            console.log(`Also accessible at https://${await getLocalIP()}:443`);
           });
         }
       } catch (error) {
@@ -157,9 +157,9 @@ app.use((req, res, next) => {
     }
     
     // Always start HTTP server
-    server.listen(Number(port), host, () => {
+    server.listen(Number(port), host, async () => {
       console.log(`HTTP Server running at http://localhost:${port}`);
-      console.log(`Also accessible at http://${getLocalIP()}:${port}`);
+      console.log(`Also accessible at http://${await getLocalIP()}:${port}`);
       console.log("Environment: " + (process.env.NODE_ENV || "development"));
     });
   } catch (error) {
@@ -174,8 +174,8 @@ app.use((req, res, next) => {
 })();
 
 // Helper function to get local IP address
-function getLocalIP() {
-  const os = require('os');
+async function getLocalIP() {
+  const os = await import('os');
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
     const ifaceList = interfaces[name];
