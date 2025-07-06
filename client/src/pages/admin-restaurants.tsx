@@ -19,7 +19,7 @@ import { getStatusColor, getInitials, slugify } from "@/lib/utils";
 const restaurantSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }).optional(),
+  password: z.string().min(8, { message: "Password must be at least 8 characters" }).optional(),
   description: z.string().optional(),
   address: z.string().optional(),
   phone: z.string().optional(),

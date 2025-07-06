@@ -115,14 +115,24 @@ export const feedback = pgTable("feedback", {
 });
 
 // Insert Schemas
-export const insertPlatformAdminSchema = createInsertSchema(platformAdmins).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertRestaurantSchema = createInsertSchema(restaurants).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPlatformAdminSchema = createInsertSchema(platformAdmins, {
+  password: z.string().min(8, "Password must be at least 8 characters long")
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertRestaurantSchema = createInsertSchema(restaurants, {
+  password: z.string().min(8, "Password must be at least 8 characters long")
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTableSchema = createInsertSchema(tables).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertUserSchema = createInsertSchema(users, {
+  password: z.string().min(8, "Password must be at least 8 characters long")
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
 export const insertFeedbackSchema = createInsertSchema(feedback).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Select Types
