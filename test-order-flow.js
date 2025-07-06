@@ -61,22 +61,31 @@ async function getMenuItems(restaurantId, cookie) {
 async function placeOrder(restaurantId, tableId, menuItems) {
   console.log(`Placing order at restaurant ${restaurantId}, table ${tableId}...`);
   
-  // Select 2 random menu items
+  // Select 2 specific menu items to ensure deterministic behavior
   const selectedItems = [];
-  for (let i = 0; i < 2 && i < menuItems.length; i++) {
+  const itemsToSelect = Math.min(2, menuItems.length);
+  
+  // Use a set to track selected items to avoid duplicates
+  const selectedIndices = new Set();
+  
+  while (selectedIndices.size < itemsToSelect && selectedIndices.size < menuItems.length) {
     const randomIndex = Math.floor(Math.random() * menuItems.length);
-    const menuItem = menuItems[randomIndex];
-    selectedItems.push({
-      menuItemId: menuItem.id,
-      quantity: Math.floor(Math.random() * 3) + 1,
-      price: menuItem.price
-    });
+    if (!selectedIndices.has(randomIndex)) {
+      selectedIndices.add(randomIndex);
+      const menuItem = menuItems[randomIndex];
+      selectedItems.push({
+        menuItemId: menuItem.id,
+        quantity: Math.floor(Math.random() * 3) + 1, // 1-3 items
+        price: menuItem.price
+      });
+    }
   }
   
-  // Calculate total
+  // Calculate total more accurately
   const total = selectedItems.reduce((sum, item) => {
-    return sum + (parseFloat(item.price) * item.quantity);
-  }, 0).toFixed(2);
+    const itemTotal = parseFloat(item.price) * item.quantity;
+    return sum + itemTotal;
+  }, 0);
   
   // Create order payload
   const orderData = {
@@ -84,7 +93,7 @@ async function placeOrder(restaurantId, tableId, menuItems) {
     tableId: tableId,
     restaurantId: restaurantId,
     status: "pending",
-    total: total.toString(),
+    total: total.toFixed(2),
     items: selectedItems
   };
   
@@ -94,7 +103,8 @@ async function placeOrder(restaurantId, tableId, menuItems) {
   const response = await apiRequest('POST', `/api/restaurants/${restaurantId}/orders`, orderData);
   
   if (!response.ok) {
-    throw new Error(`Failed to place order: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to place order: ${response.status} ${response.statusText} - ${errorText}`);
   }
   
   const data = await response.json();
@@ -102,15 +112,16 @@ async function placeOrder(restaurantId, tableId, menuItems) {
   return data;
 }
 
-// Get active orders as restaurant manager
+// Get active orders as restaurant manager (fixed endpoint)
 async function getActiveOrders(restaurantId, cookie) {
   console.log(`Getting active orders for restaurant ${restaurantId}...`);
-  const response = await fetch(`${BASE_URL}/api/restaurants/${restaurantId}/orders/active`, {
+  const response = await fetch(`${BASE_URL}/api/restaurants/${restaurantId}/active-orders`, {
     headers: { Cookie: cookie }
   });
   
   if (!response.ok) {
-    throw new Error(`Failed to get active orders: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to get active orders: ${response.status} ${response.statusText} - ${errorText}`);
   }
   
   const data = await response.json();
@@ -131,7 +142,8 @@ async function updateOrderStatus(restaurantId, orderId, status, cookie) {
   });
   
   if (!response.ok) {
-    throw new Error(`Failed to update order status: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to update order status: ${response.status} ${response.statusText} - ${errorText}`);
   }
   
   const data = await response.json();
@@ -150,17 +162,26 @@ async function runTest() {
     // Get menu items
     const menuItems = await getMenuItems(RESTAURANT_ID, cookie);
     
+    if (menuItems.length === 0) {
+      throw new Error('No menu items found for restaurant. Please ensure menu items exist before running the test.');
+    }
+    
     // Place an order as a customer
     const order = await placeOrder(RESTAURANT_ID, TABLE_ID, menuItems);
+    
+    // Wait a moment for the order to be processed
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Verify order appears in active orders
     const activeOrders = await getActiveOrders(RESTAURANT_ID, cookie);
     const placedOrder = activeOrders.find(o => o.id === order.id);
     
     if (placedOrder) {
-      console.log('Order successfully appeared in active orders!');
+      console.log('✅ Order successfully appeared in active orders!');
     } else {
-      console.error('Order not found in active orders');
+      console.error('❌ Order not found in active orders');
+      console.log('Placed order ID:', order.id);
+      console.log('Active order IDs:', activeOrders.map(o => o.id));
     }
     
     // Update order status through the workflow
@@ -169,15 +190,16 @@ async function runTest() {
     
     for (const status of statuses) {
       updatedOrder = await updateOrderStatus(RESTAURANT_ID, order.id, status, cookie);
-      console.log(`Order status changed to: ${updatedOrder.status}`);
+      console.log(`✅ Order status changed to: ${updatedOrder.status}`);
       
       // Pause between status updates
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
     
-    console.log('Test completed successfully!');
+    console.log('🎉 Test completed successfully!');
   } catch (error) {
-    console.error('Test failed:', error.message);
+    console.error('❌ Test failed:', error.message);
+    process.exit(1);
   }
 }
 

@@ -431,9 +431,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the order
       const order = await storage.createOrder(validation.data);
 
-      // Create order items
+      // Validate and create order items
       if (req.body.items && Array.isArray(req.body.items)) {
+        if (req.body.items.length === 0) {
+          return res.status(400).json({ message: 'Order must contain at least one item' });
+        }
+
         for (const item of req.body.items) {
+          // Validate that the menu item exists and belongs to the restaurant
+          const menuItem = await storage.getMenuItem(item.menuItemId);
+          if (!menuItem) {
+            return res.status(400).json({ message: `Menu item with ID ${item.menuItemId} not found` });
+          }
+          if (menuItem.restaurantId !== restaurantId) {
+            return res.status(400).json({ message: `Menu item ${item.menuItemId} does not belong to this restaurant` });
+          }
+          if (!menuItem.isAvailable) {
+            return res.status(400).json({ message: `Menu item "${menuItem.name}" is currently unavailable` });
+          }
+          
+          // Validate quantity
+          if (!item.quantity || item.quantity < 1) {
+            return res.status(400).json({ message: 'Item quantity must be at least 1' });
+          }
+          
+          // Validate price matches the menu item price
+          if (parseFloat(item.price) !== parseFloat(menuItem.price)) {
+            return res.status(400).json({ message: `Price mismatch for item "${menuItem.name}". Expected ${menuItem.price}, got ${item.price}` });
+          }
+
           await storage.createOrderItem({
             quantity: item.quantity,
             price: item.price,
@@ -441,6 +467,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             menuItemId: item.menuItemId
           });
         }
+      } else {
+        return res.status(400).json({ message: 'Order must contain items array' });
       }
 
       // Get the complete order with items

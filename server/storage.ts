@@ -82,14 +82,16 @@ export interface IStorage {
   // Stripe related helpers
   updateRestaurantStripeInfo(restaurantId: number, stripeCustomerId: string, stripeSubscriptionId: string): Promise<Restaurant | undefined>;
 
-  // Mock menu items for test restaurant
+  // Menu items method - unified interface
   getMenuItems(restaurantId: number): Promise<MenuItem[]>;
+  
+  // Seed data for testing
+  seedMenuItems(restaurantId: number): Promise<void>;
 }
 
-// Mock menu items for test restaurant
-const mockMenuItems = [
+// Sample menu items for seeding test data
+const SAMPLE_MENU_ITEMS = [
   {
-    id: 1,
     name: "Classic Margherita",
     description: "Fresh tomatoes, mozzarella, basil, and olive oil",
     price: "12.99",
@@ -98,7 +100,6 @@ const mockMenuItems = [
     image: null
   },
   {
-    id: 2,
     name: "Pepperoni Feast",
     description: "Loaded with pepperoni and extra cheese",
     price: "14.99",
@@ -107,7 +108,6 @@ const mockMenuItems = [
     image: null
   },
   {
-    id: 3,
     name: "Garlic Bread",
     description: "Toasted bread with garlic butter and herbs",
     price: "5.99",
@@ -116,7 +116,6 @@ const mockMenuItems = [
     image: null
   },
   {
-    id: 4,
     name: "Caesar Salad",
     description: "Fresh romaine lettuce, croutons, parmesan, and Caesar dressing",
     price: "8.99",
@@ -125,7 +124,6 @@ const mockMenuItems = [
     image: null
   },
   {
-    id: 5,
     name: "Spaghetti Bolognese",
     description: "Classic pasta with meat sauce and parmesan",
     price: "13.99",
@@ -134,7 +132,6 @@ const mockMenuItems = [
     image: null
   },
   {
-    id: 6,
     name: "Fettuccine Alfredo",
     description: "Creamy parmesan sauce with garlic and herbs",
     price: "12.99",
@@ -143,7 +140,6 @@ const mockMenuItems = [
     image: null
   },
   {
-    id: 7,
     name: "Chocolate Lava Cake",
     description: "Warm chocolate cake with a molten center, served with vanilla ice cream",
     price: "7.99",
@@ -152,7 +148,6 @@ const mockMenuItems = [
     image: null
   },
   {
-    id: 8,
     name: "Tiramisu",
     description: "Classic Italian dessert with coffee-soaked ladyfingers and mascarpone cream",
     price: "6.99",
@@ -161,7 +156,6 @@ const mockMenuItems = [
     image: null
   },
   {
-    id: 9,
     name: "Soft Drinks",
     description: "Choice of Coke, Sprite, Fanta, or Diet Coke",
     price: "2.99",
@@ -170,7 +164,6 @@ const mockMenuItems = [
     image: null
   },
   {
-    id: 10,
     name: "Fresh Lemonade",
     description: "Homemade lemonade with mint",
     price: "3.99",
@@ -182,10 +175,11 @@ const mockMenuItems = [
 
 export class DatabaseStorage implements IStorage {
   constructor() {
-    this.initializeDefaultAdmin();
+    this.initializeDefaultData();
   }
 
-  private async initializeDefaultAdmin() {
+  private async initializeDefaultData() {
+    // Initialize default admin
     const admin = await this.getPlatformAdminByEmail('admin@restomate.com');
     if (!admin) {
       await this.createPlatformAdmin({
@@ -193,6 +187,32 @@ export class DatabaseStorage implements IStorage {
         password: 'admin123',
         name: 'System Admin'
       });
+    }
+
+    // Initialize test restaurant if it doesn't exist
+    const testRestaurant = await this.getRestaurant(2);
+    if (!testRestaurant) {
+      console.log('Test restaurant not found, creating it...');
+      try {
+        await this.createRestaurant({
+          name: 'Demo Restaurant',
+          email: 'restaurant@demo.com',
+          password: 'password123',
+          address: '123 Demo Street',
+          phone: '+1234567890',
+          slug: 'demo-restaurant'
+        });
+        console.log('Test restaurant created successfully');
+      } catch (error) {
+        console.log('Note: Test restaurant creation failed, may already exist');
+      }
+    }
+
+    // Seed menu items for test restaurant if none exist
+    const existingMenuItems = await this.getMenuItemsByRestaurantId(2);
+    if (existingMenuItems.length === 0) {
+      console.log('Seeding menu items for test restaurant...');
+      await this.seedMenuItems(2);
     }
   }
 
@@ -593,10 +613,29 @@ export class DatabaseStorage implements IStorage {
     return await this.getRestaurant(restaurantId);
   }
 
-  // Mock menu items for test restaurant
+  // Menu items method - unified interface
   async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
     // Fetch menu items from the database for the given restaurant
     return await db.select().from(menuItems).where(eq(menuItems.restaurantId, restaurantId));
+  }
+
+  // Seed data for testing
+  async seedMenuItems(restaurantId: number): Promise<void> {
+    // Fetch existing menu items for the restaurant
+    const existingMenuItems = await this.getMenuItemsByRestaurantId(restaurantId);
+
+    // If no menu items exist for the restaurant, seed sample menu items
+    if (existingMenuItems.length === 0) {
+      console.log(`Seeding ${SAMPLE_MENU_ITEMS.length} menu items for restaurant ${restaurantId}`);
+      for (const item of SAMPLE_MENU_ITEMS) {
+        await this.createMenuItem({
+          ...item,
+          restaurantId,
+          isAvailable: true,
+          image: null
+        });
+      }
+    }
   }
 }
 
