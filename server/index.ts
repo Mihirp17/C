@@ -11,7 +11,7 @@ import cors from "cors";
 console.log("Starting server initialization...");
 console.log("DATABASE_URL:", process.env.DATABASE_URL);
 console.log("SESSION_SECRET:", process.env.SESSION_SECRET);
-console.log("STRIPE_SECRET_KEY:", process.env.STRIPE_SECRET_KEY);
+
 
 // Check for required environment variables
 const requiredEnvVars = ['DATABASE_URL'];
