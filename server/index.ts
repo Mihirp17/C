@@ -1,20 +1,20 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { registerRoutes } from "./routes.js";
+import { setupWebSocketServer } from "./socket.js";
+import { setupVite, serveStatic, log } from "./vite.js";
 import path from "path";
-import * as https from "https";
-import * as fs from "fs";
-import cors from "cors";
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import cors from 'cors';
 
 // Debug logs to check environment variables
 console.log("Starting server initialization...");
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
-console.log("SESSION_SECRET:", process.env.SESSION_SECRET);
-
+console.log("DATABASE_URL:", process.env.DATABASE_URL ? "***" : "not set");
+console.log("SESSION_SECRET:", process.env.SESSION_SECRET ? "***" : "not set");
 
 // Check for required environment variables
-const requiredEnvVars = ['DATABASE_URL'];
+const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
@@ -25,42 +25,64 @@ if (missingEnvVars.length > 0) {
 
 const app = express();
 
-// Configure CORS
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or Postman)
-    if (!origin) return callback(null, true);
-    
-    // Allow localhost and production domains
-    const allowedOrigins = [
-      'http://localhost:5000',
-      'https://localhost:5000',
-      'http://localhost:3000',
-      'https://localhost:3000',
-      /^https?:\/\/192\.168\.\d+\.\d+:?\d*$/,  // Allow local network IPs
-      /^https?:\/\/10\.\d+\.\d+\.\d+:?\d*$/,    // Allow local network IPs
-    ];
-    
-    const isAllowed = allowedOrigins.some(allowed => 
-      allowed instanceof RegExp ? allowed.test(origin) : allowed === origin
-    );
-    
-    if (isAllowed || process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+// Security middleware
+if (process.env.NODE_ENV === "development") {
+  // Disable Helmet's CSP in development
+  app.use(
+    helmet({
+      contentSecurityPolicy: false
+    })
+  );
+  
+  // Add CSP meta tag middleware for development
+  app.use((req, res, next) => {
+    if (req.path === '/') {
+      res.setHeader('Content-Security-Policy', `
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com;
+        script-src-elem 'self' 'unsafe-inline' https://replit.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data:;
+        connect-src 'self' ws: wss: http://localhost:3000 ws://localhost:3000;
+        frame-src 'self';
+        object-src 'none';
+        media-src 'self';
+        worker-src 'self' blob:;
+      `.replace(/\s+/g, ' ').trim());
     }
-  },
+    next();
+  });
+} else {
+  app.use(helmet());
+}
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.ALLOWED_ORIGINS?.split(',') 
+    : 'http://localhost:5000',
   credentials: true
 }));
 
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later'
+});
+app.use('/api/', limiter);
+
 // Basic middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 // Health check route
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
+  res.json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // Request logging middleware
@@ -80,7 +102,11 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        // Sanitize sensitive data before logging
+        const sanitizedResponse = { ...capturedJsonResponse };
+        if (sanitizedResponse.password) delete sanitizedResponse.password;
+        if (sanitizedResponse.token) delete sanitizedResponse.token;
+        logLine += ` :: ${JSON.stringify(sanitizedResponse)}`;
       }
       log(logLine);
     }
@@ -88,6 +114,24 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Request validation middleware
+const validateRequest = (req: Request, res: Response, next: NextFunction) => {
+  if (req.method === 'POST' || req.method === 'PUT') {
+    const contentType = req.get('Content-Type');
+    console.log(`${req.method} ${req.path} - Content-Type: ${contentType}`);
+    
+    // More permissive check for JSON content type
+    if (!contentType || !contentType.includes('application/json')) {
+      return res.status(415).json({ 
+        message: 'Content-Type must be application/json',
+        received: contentType || 'none'
+      });
+    }
+  }
+  next();
+};
+app.use('/api/', validateRequest);
 
 (async () => {
   try {
@@ -99,7 +143,21 @@ app.use((req, res, next) => {
     app.use((err: Error & { status?: number; statusCode?: number }, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      res.status(status).json({ message });
+      
+      // Log detailed error in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error details:', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        });
+      }
+      
+      res.status(status).json({ 
+        message,
+        status,
+        timestamp: new Date().toISOString()
+      });
       log(`Error: ${message}`);
     });
 
@@ -114,52 +172,11 @@ app.use((req, res, next) => {
       console.log("Static file serving setup completed");
     }
 
-    const port = process.env.PORT || 5000;
-    const host = '0.0.0.0'; // Listen on all interfaces instead of just localhost
+    const port = process.env.PORT || 3000;
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
     
-    // Try to set up HTTPS server with self-signed certificates for development
-    if (process.env.NODE_ENV === "development" && process.env.ENABLE_HTTPS !== 'false') {
-      try {
-        // Generate or use existing self-signed certificates
-        const certPath = path.join(process.cwd(), 'server', 'certs');
-        const keyPath = path.join(certPath, 'key.pem');
-        const certFilePath = path.join(certPath, 'cert.pem');
-        
-        let httpsOptions: https.ServerOptions | null = null;
-        
-        if (fs.existsSync(keyPath) && fs.existsSync(certFilePath)) {
-          httpsOptions = {
-            key: fs.readFileSync(keyPath),
-            cert: fs.readFileSync(certFilePath)
-          };
-          console.log("Using existing SSL certificates");
-        } else {
-          console.log("SSL certificates not found. Run 'npm run generate-certs' to create them.");
-          console.log("Starting HTTP-only server...");
-        }
-        
-        if (httpsOptions) {
-          // Create HTTPS server
-          const httpsServer = https.createServer(httpsOptions, app);
-          
-          // Set up WebSockets on HTTPS server
-          const { setupWebSocketServer } = await import('./socket');
-          setupWebSocketServer(httpsServer);
-          
-          httpsServer.listen(443, host, async () => {
-            console.log(`HTTPS Server running at https://localhost`);
-            console.log(`Also accessible at https://${await getLocalIP()}:443`);
-          });
-        }
-      } catch (error) {
-        console.error("Failed to set up HTTPS:", error);
-      }
-    }
-    
-    // Always start HTTP server
-    server.listen(Number(port), host, async () => {
-      console.log(`HTTP Server running at http://localhost:${port}`);
-      console.log(`Also accessible at http://${await getLocalIP()}:${port}`);
+    server.listen({ port: Number(port), host }, () => {
+      console.log(`Server running at http://${host}:${port}`);
       console.log("Environment: " + (process.env.NODE_ENV || "development"));
     });
   } catch (error) {
@@ -172,20 +189,3 @@ app.use((req, res, next) => {
     process.exit(1);
   }
 })();
-
-// Helper function to get local IP address
-async function getLocalIP() {
-  const os = await import('os');
-  const interfaces = os.networkInterfaces();
-  for (const name of Object.keys(interfaces)) {
-    const ifaceList = interfaces[name];
-    if (ifaceList) {
-      for (const iface of ifaceList) {
-        if (iface.family === 'IPv4' && !iface.internal) {
-          return iface.address;
-        }
-      }
-    }
-  }
-  return 'localhost';
-}
