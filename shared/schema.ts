@@ -32,8 +32,6 @@ export const restaurants = pgTable("restaurants", {
 export const subscriptions = pgTable("subscriptions", {
   id: serial("id").primaryKey(),
   restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id),
-  stripeCustomerId: text("stripe_customer_id").notNull().unique(),
-  stripeSubscriptionId: text("stripe_subscription_id").notNull().unique(),
   status: text("status").notNull(), // active, canceled, past_due
   plan: text("plan").notNull(), // basic, premium
   currentPeriodStart: timestamp("current_period_start").notNull(),

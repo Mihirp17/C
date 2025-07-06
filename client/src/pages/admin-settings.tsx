@@ -28,7 +28,7 @@ export default function AdminSettings() {
   // Platform settings
   const [platformName, setPlatformName] = useState("Restomate");
   const [supportEmail, setSupportEmail] = useState("support@restomate.com");
-  const [stripeEnabled, setStripeEnabled] = useState(true);
+
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -252,19 +252,7 @@ export default function AdminSettings() {
                     />
                   </div>
                   
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <Label htmlFor="stripeEnabled">Stripe Integration</Label>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Enable Stripe for subscription billing
-                      </p>
-                    </div>
-                    <Switch
-                      id="stripeEnabled"
-                      checked={stripeEnabled}
-                      onCheckedChange={setStripeEnabled}
-                    />
-                  </div>
+
                   
                   <div className="flex items-center justify-between py-2">
                     <div>

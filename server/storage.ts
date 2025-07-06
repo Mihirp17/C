@@ -79,8 +79,7 @@ export interface IStorage {
   getAverageOrderValue(restaurantId: number, startDate: Date, endDate: Date): Promise<number>;
   getPopularMenuItems(restaurantId: number, limit: number): Promise<{id: number, name: string, count: number, price: string}[]>;
   
-  // Stripe related helpers
-  updateRestaurantStripeInfo(restaurantId: number, stripeCustomerId: string, stripeSubscriptionId: string): Promise<Restaurant | undefined>;
+
 
   // Menu items method - unified interface
   getMenuItems(restaurantId: number): Promise<MenuItem[]>;
@@ -586,32 +585,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  // Stripe Helpers
-  async updateRestaurantStripeInfo(restaurantId: number, stripeCustomerId: string, stripeSubscriptionId: string): Promise<Restaurant | undefined> {
-    // First check if subscription exists
-    const existingSubscription = await this.getSubscriptionByRestaurantId(restaurantId);
-    
-    if (existingSubscription) {
-      // Update existing subscription
-      await this.updateSubscriptionByRestaurantId(restaurantId, {
-        stripeCustomerId,
-        stripeSubscriptionId
-      });
-    } else {
-      // Create new subscription
-      await this.createSubscription({
-        restaurantId,
-        stripeCustomerId,
-        stripeSubscriptionId,
-        status: 'active',
-        plan: 'basic', // Default plan
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
-      });
-    }
-    
-    return await this.getRestaurant(restaurantId);
-  }
+
 
   // Menu items method - unified interface
   async getMenuItems(restaurantId: number): Promise<MenuItem[]> {
