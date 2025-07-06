@@ -8,6 +8,8 @@ import { z } from "zod";
 import { insertRestaurantSchema, insertUserSchema, insertMenuItemSchema, insertTableSchema, insertOrderSchema, insertOrderItemSchema, insertFeedbackSchema } from "@shared/schema";
 import { stripe, createOrUpdateCustomer, createSubscription, updateSubscription, cancelSubscription, generateClientSecret, handleWebhookEvent, PLANS } from "./stripe";
 import QRCode from 'qrcode';
+import * as os from 'os';
+import { generateRestaurantInsights, generateMenuOptimizationSuggestions, analyzeFeedbackSentiment } from "./ai";
 
 // Schema for login requests
 const loginSchema = z.object({
@@ -20,6 +22,22 @@ const dateRangeSchema = z.object({
   startDate: z.string().transform(s => new Date(s)),
   endDate: z.string().transform(s => new Date(s))
 });
+
+// Helper function to get local IP address
+function getLocalIP(): string {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    const ifaceList = interfaces[name];
+    if (ifaceList) {
+      for (const iface of ifaceList) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          return iface.address;
+        }
+      }
+    }
+  }
+  return 'localhost';
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log("Starting route registration...");
@@ -189,9 +207,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate QR code
       const tableNumber = req.body.number;
-      const baseUrl = req.protocol + '://' + req.get('host');
+      // For development, use the local IP to make QR codes work from mobile devices
+      let baseUrl = req.protocol + '://' + req.get('host');
+      
+      // If in development, prefer using the local IP address
+      if (process.env.NODE_ENV === 'development') {
+        const localIP = getLocalIP();
+        const port = process.env.PORT || 5000;
+        baseUrl = `http://${localIP}:${port}`;
+      }
+      
       const qrUrl = `${baseUrl}/menu/${restaurantId}/${tableNumber}`;
-      const qrCode = await QRCode.toDataURL(qrUrl);
+      const qrCode = await QRCode.toDataURL(qrUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
 
       const validation = insertTableSchema.safeParse({
         ...req.body,
@@ -431,9 +465,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the order
       const order = await storage.createOrder(validation.data);
 
-      // Create order items
+      // Validate and create order items
       if (req.body.items && Array.isArray(req.body.items)) {
+        if (req.body.items.length === 0) {
+          return res.status(400).json({ message: 'Order must contain at least one item' });
+        }
+
         for (const item of req.body.items) {
+          // Validate that the menu item exists and belongs to the restaurant
+          const menuItem = await storage.getMenuItem(item.menuItemId);
+          if (!menuItem) {
+            return res.status(400).json({ message: `Menu item with ID ${item.menuItemId} not found` });
+          }
+          if (menuItem.restaurantId !== restaurantId) {
+            return res.status(400).json({ message: `Menu item ${item.menuItemId} does not belong to this restaurant` });
+          }
+          if (!menuItem.isAvailable) {
+            return res.status(400).json({ message: `Menu item "${menuItem.name}" is currently unavailable` });
+          }
+          
+          // Validate quantity
+          if (!item.quantity || item.quantity < 1) {
+            return res.status(400).json({ message: 'Item quantity must be at least 1' });
+          }
+          
+          // Validate price matches the menu item price
+          if (parseFloat(item.price) !== parseFloat(menuItem.price)) {
+            return res.status(400).json({ message: `Price mismatch for item "${menuItem.name}". Expected ${menuItem.price}, got ${item.price}` });
+          }
+
           await storage.createOrderItem({
             quantity: item.quantity,
             price: item.price,
@@ -441,6 +501,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             menuItemId: item.menuItemId
           });
         }
+      } else {
+        return res.status(400).json({ message: 'Order must contain items array' });
       }
 
       // Get the complete order with items
@@ -596,6 +658,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Failed to fetch popular items' });
     }
   });
+  
+  // AI Insights endpoints
+  app.post('/api/restaurants/:restaurantId/analytics/ai-insights', authenticate, authorizeRestaurant, async (req, res) => {
+    try {
+      const restaurantId = parseInt(req.params.restaurantId);
+      if (isNaN(restaurantId)) {
+        return res.status(400).json({ message: 'Invalid restaurant ID' });
+      }
+
+      const validation = dateRangeSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ errors: validation.error.errors });
+      }
+
+      const { startDate, endDate } = validation.data;
+      
+      // Check if Gemini API key is configured
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ 
+          message: 'AI insights are not configured. Please add GEMINI_API_KEY to your environment variables.' 
+        });
+      }
+
+      const insights = await generateRestaurantInsights(restaurantId, startDate, endDate);
+      return res.json(insights);
+    } catch (error) {
+      console.error('Error generating AI insights:', error);
+      return res.status(500).json({ message: 'Failed to generate AI insights' });
+    }
+  });
+
+  app.get('/api/restaurants/:restaurantId/menu-optimization', authenticate, authorizeRestaurant, async (req, res) => {
+    try {
+      const restaurantId = parseInt(req.params.restaurantId);
+      if (isNaN(restaurantId)) {
+        return res.status(400).json({ message: 'Invalid restaurant ID' });
+      }
+
+      // Check if Gemini API key is configured
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ 
+          message: 'AI insights are not configured. Please add GEMINI_API_KEY to your environment variables.' 
+        });
+      }
+
+      const menuItems = await storage.getMenuItemsByRestaurantId(restaurantId);
+      const suggestions = await generateMenuOptimizationSuggestions(restaurantId, menuItems);
+      
+      return res.json({ suggestions });
+    } catch (error) {
+      console.error('Error generating menu optimization:', error);
+      return res.status(500).json({ message: 'Failed to generate menu optimization suggestions' });
+    }
+  });
+
+  app.post('/api/restaurants/:restaurantId/analyze-feedback', authenticate, authorizeRestaurant, async (req, res) => {
+    try {
+      const { feedback } = req.body;
+      
+      if (!feedback || typeof feedback !== 'string') {
+        return res.status(400).json({ message: 'Feedback text is required' });
+      }
+
+      // Check if Gemini API key is configured
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ 
+          message: 'AI insights are not configured. Please add GEMINI_API_KEY to your environment variables.' 
+        });
+      }
+
+      const analysis = await analyzeFeedbackSentiment(feedback);
+      return res.json(analysis);
+    } catch (error) {
+      console.error('Error analyzing feedback:', error);
+      return res.status(500).json({ message: 'Failed to analyze feedback' });
+    }
+  });
+  
   console.log("Analytics routes set up successfully");
 
   // Feedback Routes
